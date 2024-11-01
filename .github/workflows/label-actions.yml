@@ -16,6 +16,6 @@ permissions:
 jobs:
   action:
     runs-on: ubuntu-latest
-    if: github.repository_owner == 'TryGhost'
+    if: github.repository_owner == 'Axyl-Projects'
     steps:
-      - uses: tryghost/actions/actions/label-actions@main
+      - uses: axyl-projects/actions/actions/label-actions@main
