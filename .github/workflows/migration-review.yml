@@ -3,12 +3,12 @@ on:
   pull_request_target:
     types: [opened]
     paths:
-      - 'ghost/core/core/server/data/schema/**'
-      - 'ghost/core/core/server/data/migrations/versions/**'
+      - "ghost/core/core/server/data/schema/**"
+      - "ghost/core/core/server/data/migrations/versions/**"
 jobs:
   createComment:
     runs-on: ubuntu-latest
-    if: github.repository_owner == 'TryGhost'
+    if: github.repository_owner == 'Axyl-Projects'
     name: Add migration review requirements
     steps:
       - uses: actions/github-script@v6

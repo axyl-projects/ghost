@@ -5,7 +5,7 @@ on:
   push:
     branches:
       - main
-      - 'v5.*'
+      - "v5.*"
 
 env:
   FORCE_COLOR: 1
@@ -55,7 +55,7 @@ jobs:
       - name: Get metadata (pull_request)
         if: github.event_name == 'pull_request'
         run: |
-          BASE_COMMIT=$(curl --location --request GET 'https://api.github.com/repos/TryGhost/Ghost/pulls/${{ github.event.pull_request.number }}' --header 'Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' | jq -r .base.sha)
+          BASE_COMMIT=$(curl --location --request GET 'https://api.github.com/repos/Axyl-Projects/Ghost/pulls/${{ github.event.pull_request.number }}' --header 'Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' | jq -r .base.sha)
           echo "Setting BASE_COMMIT to $BASE_COMMIT"
           echo "BASE_COMMIT=$BASE_COMMIT" >> $GITHUB_ENV
 
@@ -66,7 +66,7 @@ jobs:
           echo "Looking up: ${{ github.event.pull_request.user.login }}"
           ENCODED_USERNAME=$(printf '%s' '${{ github.event.pull_request.user.login }}' | jq -sRr @uri)
 
-          LOOKUP_USER=$(curl --write-out "%{http_code}" --silent --output /dev/null --location "https://api.github.com/orgs/tryghost/members/$ENCODED_USERNAME" --header "Authorization: Bearer ${{ secrets.CANARY_DOCKER_BUILD }}")
+          LOOKUP_USER=$(curl --write-out "%{http_code}" --silent --output /dev/null --location "https://api.github.com/orgs/axyl-projects/members/$ENCODED_USERNAME" --header "Authorization: Bearer ${{ secrets.CANARY_DOCKER_BUILD }}")
 
           if [ "$LOOKUP_USER" == "204" ]; then
             echo "User is in the org"
@@ -121,7 +121,7 @@ jobs:
             any-code:
               - '!**/*.md'
 
-      - name: 'Checkout current commit'
+      - name: "Checkout current commit"
         uses: actions/checkout@v4
         with:
           ref: ${{ env.HEAD_COMMIT }}
@@ -238,11 +238,11 @@ jobs:
     needs: [job_setup]
     name: i18n
     if: |
-        needs.job_setup.outputs.changed_comments_ui == 'true'
-        || needs.job_setup.outputs.changed_signup_form == 'true'
-        || needs.job_setup.outputs.changed_sodo_search == 'true'
-        || needs.job_setup.outputs.changed_portal == 'true'
-        || needs.job_setup.outputs.changed_core == 'true'
+      needs.job_setup.outputs.changed_comments_ui == 'true'
+      || needs.job_setup.outputs.changed_signup_form == 'true'
+      || needs.job_setup.outputs.changed_sodo_search == 'true'
+      || needs.job_setup.outputs.changed_portal == 'true'
+      || needs.job_setup.outputs.changed_core == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -308,72 +308,72 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: true
-    - uses: actions/setup-node@v4
-      env:
-        FORCE_COLOR: 0
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: yarn
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: actions/setup-node@v4
+        env:
+          FORCE_COLOR: 0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: yarn
 
-    - name: Install Stripe-CLI
-      run: |
-        export VERSION=1.13.5
-        wget "https://github.com/stripe/stripe-cli/releases/download/v$VERSION/stripe_${VERSION}_linux_x86_64.tar.gz"
-        tar -zxvf "stripe_${VERSION}_linux_x86_64.tar.gz"
-        mv stripe /usr/local/bin
-        stripe -v
+      - name: Install Stripe-CLI
+        run: |
+          export VERSION=1.13.5
+          wget "https://github.com/stripe/stripe-cli/releases/download/v$VERSION/stripe_${VERSION}_linux_x86_64.tar.gz"
+          tar -zxvf "stripe_${VERSION}_linux_x86_64.tar.gz"
+          mv stripe /usr/local/bin
+          stripe -v
 
-    - name: Restore caches
-      uses: ./.github/actions/restore-cache
-      env:
-        DEPENDENCY_CACHE_KEY: ${{ needs.job_setup.outputs.dependency_cache_key }}
+      - name: Restore caches
+        uses: ./.github/actions/restore-cache
+        env:
+          DEPENDENCY_CACHE_KEY: ${{ needs.job_setup.outputs.dependency_cache_key }}
 
-    - name: Run migrations
-      working-directory: ghost/core
-      run: yarn knex-migrator init
+      - name: Run migrations
+        working-directory: ghost/core
+        run: yarn knex-migrator init
 
-    - name: Get Playwright version
-      id: playwright-version
-      run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> $GITHUB_OUTPUT
-    - uses: actions/cache@v4
-      name: Check if Playwright browser is cached
-      id: playwright-cache
-      with:
-        path: ~/.cache/ms-playwright
-        key: ${{ runner.os }}-Playwright-${{steps.playwright-version.outputs.version}}
-    - name: Install Playwright browser if not cached
-      if: steps.playwright-cache.outputs.cache-hit != 'true'
-      run: npx playwright install --with-deps
-    - name: Install OS dependencies of Playwright if cache hit
-      if: steps.playwright-cache.outputs.cache-hit == 'true'
-      run: npx playwright install-deps
+      - name: Get Playwright version
+        id: playwright-version
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> $GITHUB_OUTPUT
+      - uses: actions/cache@v4
+        name: Check if Playwright browser is cached
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-Playwright-${{steps.playwright-version.outputs.version}}
+      - name: Install Playwright browser if not cached
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps
+      - name: Install OS dependencies of Playwright if cache hit
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps
 
-    - name: Build Admin
-      run: yarn nx run ghost-admin:build:dev
+      - name: Build Admin
+        run: yarn nx run ghost-admin:build:dev
 
-    - name: Run Playwright tests locally
-      run: yarn test:browser
-      env:
-        CI: true
-        STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
-        STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+      - name: Run Playwright tests locally
+        run: yarn test:browser
+        env:
+          CI: true
+          STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
 
-    - uses: tryghost/actions/actions/slack-build@main
-      if: failure() && github.event_name == 'push' && github.ref == 'refs/heads/main'
-      with:
-        status: ${{ job.status }}
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      - uses: tryghost/actions/actions/slack-build@main
+        if: failure() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          status: ${{ job.status }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
-    - uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: browser-tests-playwright-report
-        path: ghost/core/playwright-report
-        retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-tests-playwright-report
+          path: ghost/core/playwright-report
+          retention-days: 30
 
   job_perf-tests:
     runs-on:
@@ -416,7 +416,7 @@ jobs:
       - name: Run analysis
         uses: benchmark-action/github-action-benchmark@v1.20.4
         with:
-          tool: 'customSmallerIsBetter'
+          tool: "customSmallerIsBetter"
           output-file-path: ghost/core/boot-perf-formatted.json
           benchmark-data-dir-path: ""
           gh-repository: github.com/TryGhost/Ghost-Benchmarks
@@ -429,7 +429,7 @@ jobs:
     if: needs.job_setup.outputs.changed_any_code == 'true'
     strategy:
       matrix:
-        node: [ '18.12.1', '20.11.1' ]
+        node: ["18.12.1", "20.11.1"]
     name: Unit tests (Node ${{ matrix.node }})
     steps:
       - uses: actions/checkout@v4
@@ -472,7 +472,7 @@ jobs:
     if: needs.job_setup.outputs.changed_core == 'true'
     strategy:
       matrix:
-        node: [ '18.12.1', '20.11.1' ]
+        node: ["18.12.1", "20.11.1"]
         env:
           - DB: mysql8
             NODE_ENV: testing-mysql
@@ -500,10 +500,10 @@ jobs:
       - uses: daniellockyer/mysql-action@main
         if: matrix.env.DB == 'mysql8'
         with:
-          authentication plugin: 'caching_sha2_password'
-          mysql version: '8.0'
-          mysql database: 'ghost_testing'
-          mysql root password: 'root'
+          authentication plugin: "caching_sha2_password"
+          mysql version: "8.0"
+          mysql database: "ghost_testing"
+          mysql root password: "root"
 
       - name: Restore caches
         uses: ./.github/actions/restore-cache
@@ -567,7 +567,7 @@ jobs:
         continue-on-error: true
         if: (github.event_name == 'push' && github.repository_owner == 'TryGhost') || (github.event_name == 'pull_request' && startsWith(github.head_ref, 'TryGhost/'))
         with:
-          metricName: 'test-time'
+          metricName: "test-time"
           metricValue: ${{ env.test_time }}
           configuration: |
             {
@@ -628,10 +628,10 @@ jobs:
       - uses: daniellockyer/mysql-action@main
         if: matrix.env.DB == 'mysql8'
         with:
-          authentication plugin: 'caching_sha2_password'
-          mysql version: '8.0'
-          mysql database: 'ghost_testing'
-          mysql root password: 'root'
+          authentication plugin: "caching_sha2_password"
+          mysql version: "8.0"
+          mysql database: "ghost_testing"
+          mysql root password: "root"
 
       - name: Restore caches
         uses: ./.github/actions/restore-cache
@@ -830,7 +830,7 @@ jobs:
         env:
           FORCE_COLOR: 0
         with:
-          node-version: '16.14.0'
+          node-version: "16.14.0"
 
       - name: Install Ghost-CLI
         run: npm install -g ghost-cli@latest
@@ -896,11 +896,7 @@ jobs:
 
   job_coverage:
     name: Coverage
-    needs: [
-      job_admin-tests,
-      job_database-tests,
-      job_unit-tests
-    ]
+    needs: [job_admin-tests, job_database-tests, job_unit-tests]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -969,10 +965,7 @@ jobs:
           echo "One of the dependent jobs have failed or been cancelled. You may need to re-run it." && exit 1
 
   canary:
-    needs: [
-      job_setup,
-      job_required_tests
-    ]
+    needs: [job_setup, job_required_tests]
     name: Canary
     runs-on: ubuntu-latest
     if: |
@@ -1004,18 +997,14 @@ jobs:
         with:
           token: ${{ secrets.CANARY_DOCKER_BUILD }}
           workflow: .github/workflows/deploy.yml
-          ref: 'refs/heads/main'
+          ref: "refs/heads/main"
           repo: TryGhost/Ghost-Moya
           inputs: '{"version":"canary","environment":"staging","version_extra":"${{ env.branch_name }}"}'
           wait-for-completion-timeout: 25m
           wait-for-completion-interval: 30s
 
   publish_admin_x_activitypub:
-    needs: [
-      job_setup,
-      job_lint,
-      job_unit-tests
-    ]
+    needs: [job_setup, job_lint, job_unit-tests]
     name: Publish @tryghost/admin-x-activitypub
     runs-on: ubuntu-latest
     if: always() && needs.job_setup.result == 'success' && needs.job_lint.result == 'success' && needs.job_unit-tests.result == 'success' && needs.job_setup.outputs.is_main == 'true'
