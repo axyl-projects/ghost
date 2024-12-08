@@ -12,8 +12,9 @@ export const handleViewContent = (
         activityId: activity.id,
         object: activity.object,
         actor: authorActor,
-        comments: Array.isArray(activity.object.replies) ? activity.object.replies : [],
         focusReply,
+        backDrop: activity.object.type === 'Article' ? false : false,
+        width: activity.object.type === 'Article' ? 'wide' : 'narrow',
         updateActivity
     });
 };

@@ -62,7 +62,8 @@ function getMembersHelper(data, frontendKey, excludeList) {
             i18n: labs.isSet('i18n'),
             ghost: urlUtils.getSiteUrl(),
             key: frontendKey,
-            api: urlUtils.urlFor('api', {type: 'content'}, true)
+            api: urlUtils.urlFor('api', {type: 'content'}, true),
+            locale: settingsCache.get('locale') || 'en'
         };
         if (colorString) {
             attributes['accent-color'] = colorString;
@@ -161,7 +162,7 @@ function getTinybirdTrackerScript(dataRoot) {
         member_status: dataRoot.member?.status
     }, (value, key) => `tb_${key}="${value}"`).join(' ');
 
-    return `<script defer src="${scriptUrl}" data-host="${endpoint}" data-token="${token}" ${tbParams}></script>`;
+    return `<script defer src="${scriptUrl}" data-storage="localStorage" data-host="${endpoint}" data-token="${token}" ${tbParams}></script>`;
 }
 
 /**

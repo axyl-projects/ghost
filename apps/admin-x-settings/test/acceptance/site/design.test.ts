@@ -356,7 +356,7 @@ test.describe('Design settings', async () => {
         await mockApi({page, requests: {
             ...globalDataRequests,
             browseSettings: {...globalDataRequests.browseSettings, response: updatedSettingsResponse([
-                {key: 'heading_font', value: 'Caro'},
+                {key: 'heading_font', value: 'Cardo'},
                 {key: 'body_font', value: 'Inter'}
             ])},
             browseCustomThemeSettings: {method: 'GET', path: '/custom_theme_settings/', response: {
@@ -379,8 +379,8 @@ test.describe('Design settings', async () => {
         const modal = page.getByTestId('design-modal');
 
         // The fonts should be set to the values in the settings
-        await expect(modal.getByTestId('heading-font-select')).toHaveText('Caro');
-        await expect(modal.getByTestId('body-font-select')).toHaveText('Inter');
+        await expect(modal.getByTestId('heading-font-select')).toHaveText(/Cardo/);
+        await expect(modal.getByTestId('body-font-select')).toHaveText(/Inter/);
 
         const designSettingTabs = modal.getByTestId('design-setting-tabs');
         // select a different heading font
@@ -398,5 +398,205 @@ test.describe('Design settings', async () => {
         const matchingHeader = previewRequests.find(header => header.includes(expectedEncoded));
         expect(matchingHeader).toBeDefined();
         // expect(lastRequest.previewHeader).toMatch(new RegExp(`&${expectedEncoded.replace(/\+/g, '\\+')}`));
+    });
+
+    test('Old font settings are hidden with custom fonts support', async ({page}) => {
+        toggleLabsFlag('customFonts', true);
+        const {lastApiRequests} = await mockApi({page, requests: {
+            ...globalDataRequests,
+            browseThemes: {method: 'GET', path: '/themes/', response: responseFixtures.themes},
+            installTheme: {method: 'POST', path: /^\/themes\/install\/\?/, response: {
+                themes: [{
+                    name: 'headline',
+                    package: {},
+                    active: false,
+                    templates: []
+                }]
+            }},
+            activateTheme: {method: 'PUT', path: '/themes/headline/activate/', response: {
+                themes: [{
+                    name: 'headline',
+                    package: {
+                        name: 'headline',
+                        author: {
+                            name: 'Ghost Foundation'
+                        }
+                    },
+                    active: true,
+                    templates: []
+                }]
+            }},
+            browseCustomThemeSettings: {method: 'GET', path: '/custom_theme_settings/', response: {
+                custom_theme_settings: [
+                    {
+                        type: 'select',
+                        options: [
+                            'Modern sans-serif',
+                            'Elegant serif'
+                        ],
+                        default: 'Modern sans-serif',
+                        value: 'Modern sans-serif',
+                        key: 'title_font'
+                    },
+                    {
+                        type: 'select',
+                        options: [
+                            'Modern sans-serif',
+                            'Elegant serif'
+                        ],
+                        default: 'Elegant serif',
+                        value: 'Elegant serif',
+                        key: 'body_font'
+                    }
+                ]
+            }},
+            activeTheme: {
+                method: 'GET',
+                path: '/themes/active/',
+                response: {
+                    themes: [{
+                        name: 'casper',
+                        package: {},
+                        active: true,
+                        templates: []
+                    }]
+                }
+            }
+        }});
+
+        await page.goto('/');
+
+        const themeSection = page.getByTestId('theme');
+
+        await themeSection.getByRole('button', {name: 'Change theme'}).click();
+
+        const modal = page.getByTestId('theme-modal');
+
+        await modal.getByRole('button', {name: /Headline/}).click();
+
+        await modal.getByRole('button', {name: 'Install Headline'}).click();
+
+        await expect(page.getByTestId('confirmation-modal')).toHaveText(/installed/);
+
+        await page.getByRole('button', {name: 'Activate'}).click();
+
+        await expect(page.getByTestId('toast-success')).toHaveText(/headline is now your active theme/);
+
+        expect(lastApiRequests.installTheme?.url).toMatch(/\?source=github&ref=TryGhost%2FHeadline/);
+
+        await modal.getByRole('button', {name: 'Change theme'}).click();
+
+        await modal.getByRole('button', {name: 'Close'}).click();
+
+        const designSection = page.getByTestId('design');
+
+        await designSection.getByRole('button', {name: 'Customize'}).click();
+
+        const designModal = page.getByTestId('design-modal');
+
+        await designModal.getByRole('tab', {name: 'Theme'}).click();
+
+        const titleFontCustomThemeSetting = designModal.getByLabel('Title font');
+        await expect(titleFontCustomThemeSetting).not.toBeVisible();
+
+        const bodyFontCustomThemeSetting = designModal.getByLabel('Body font');
+        await expect(bodyFontCustomThemeSetting).not.toBeVisible();
+    });
+
+    test('Old font settings are visible with no custom fonts support', async ({page}) => {
+        toggleLabsFlag('customFonts', true);
+        await mockApi({page, requests: {
+            ...globalDataRequests,
+            browseThemes: {method: 'GET', path: '/themes/', response: responseFixtures.themes},
+            activateTheme: {method: 'PUT', path: '/themes/casper/activate/', response: {
+                themes: [{
+                    name: 'casper',
+                    package: {},
+                    active: true,
+                    templates: []
+                }]
+            }},
+            browseCustomThemeSettings: {method: 'GET', path: '/custom_theme_settings/', response: {
+                custom_theme_settings: [
+                    {
+                        type: 'select',
+                        options: [
+                            'Modern sans-serif',
+                            'Elegant serif'
+                        ],
+                        default: 'Modern sans-serif',
+                        value: 'Modern sans-serif',
+                        key: 'title_font'
+                    },
+                    {
+                        type: 'select',
+                        options: [
+                            'Modern sans-serif',
+                            'Elegant serif'
+                        ],
+                        default: 'Elegant serif',
+                        value: 'Elegant serif',
+                        key: 'body_font'
+                    }
+                ]
+            }},
+            activeTheme: {
+                method: 'GET',
+                path: '/themes/active/',
+                response: {
+                    themes: [{
+                        name: 'casper',
+                        package: {},
+                        active: true,
+                        templates: [],
+                        warnings: [{
+                            fatal: false,
+                            level: 'warning',
+                            rule: 'Missing support for custom fonts',
+                            details: 'CSS variables for Ghost font settings are not present: <code>--gh-font-heading</code>, <code>--gh-font-body</code>',
+                            regex: {},
+                            failures: [
+                                {
+                                    ref: 'styles'
+                                }
+                            ],
+                            code: 'GS051-CUSTOM-FONTS'
+                        }]
+                    }]
+                }
+            }
+        }});
+
+        await page.goto('/');
+
+        const themeSection = page.getByTestId('theme');
+
+        await themeSection.getByRole('button', {name: 'Change theme'}).click();
+
+        const modal = page.getByTestId('theme-modal');
+
+        await modal.getByRole('button', {name: /Casper/}).click();
+
+        await expect(modal.getByRole('button', {name: 'Activate Casper'})).toBeVisible();
+
+        await expect(page.locator('iframe[title="Theme preview"]')).toHaveAttribute('src', 'https://demo.ghost.io/');
+
+        await modal.getByRole('button', {name: 'Change theme'}).click();
+
+        await modal.getByRole('button', {name: 'Close'}).click();
+
+        const designSection = page.getByTestId('design');
+
+        await designSection.getByRole('button', {name: 'Customize'}).click();
+
+        const designModal = page.getByTestId('design-modal');
+
+        await designModal.getByRole('tab', {name: 'Theme'}).click();
+
+        const titleFontCustomThemeSetting = designModal.getByLabel('Title font');
+        await expect(titleFontCustomThemeSetting).toBeVisible();
+
+        const bodyFontCustomThemeSetting = designModal.getByLabel('Body font');
+        await expect(bodyFontCustomThemeSetting).toBeVisible();
     });
 });
